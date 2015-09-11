@@ -449,8 +449,11 @@ define([ 'crypto', 'cookie', 'fs' ], function(crypto, cookie, fs) {
         if (r.length == 0) {
           return res.redirect('/register');
         } else {
-          var c = cookie.parse(req.headers.cookie);
-          if ((!err) && (c.email) && (c.password)) {
+	  var c = null;
+	  if (typeof req.headers.cookie !== 'undefined') {
+            c = cookie.parse(req.headers.cookie);
+          }
+          if ((!err) && c && c.email && c.password) {
             return Controller.doLogin(req, res);
           } else {
             return res.render('login', {
@@ -512,7 +515,13 @@ define([ 'crypto', 'cookie', 'fs' ], function(crypto, cookie, fs) {
         if ((err) || (r.length > 0)) {
           var token = crypto.createHash('sha256').update(r[0].email + r[0].password).digest("hex");
           req.app.get('db').collection('User', function(err, u){
-            u.update({email: r[0].email}, { $set: {'token': token}});
+            u.update({email: r[0].email},
+                     { $set: {'token': token}},
+                     function (err, result) {
+                       if (err) {
+                         console.log(err);
+                       }
+                     });
           });
           res.send(200, {'token': token});
         } else {
